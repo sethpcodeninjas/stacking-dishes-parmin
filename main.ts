@@ -2,6 +2,25 @@ namespace SpriteKind {
     export const Dish = SpriteKind.create()
     export const SettledDish = SpriteKind.create()
 }
+controller.A.onEvent(ControllerButtonEvent.Pressed, function() {
+    let dishz = sprites.allOfKind(SpriteKind.Dish)
+    if (dishz.length > 0){
+        let currentDish = dishz[0]
+        let rotImg = scaling.rot(currentDish.image, 90) // rotated image
+        currentDish.setImage(rotImg)
+        unstickDish(currentDish)
+    }
+})
+function unstickDish(theDish: Sprite) {
+    let bottomY = 7 * 16
+    let topY = 16
+    if(theDish.bottom > bottomY){
+        theDish.bottom = bottomY
+    }
+    else if (theDish.top < topY){
+        theDish.top = topY
+    }
+}
 function showInstructions(){
     let msg = "These items are fragile so don't stack them:"
     for (let d of dishes){
@@ -15,9 +34,30 @@ function makeDish(){
     let dishIndex = randint(0, dishes.length - 1)
     let dish = dishes[dishIndex]
     let dishSprite = sprites.create(dish.img, SpriteKind.Dish)
-    dishSprite.vx = -100
+    dishSprite.vx = -50
+    tiles.placeOnTile(dishSprite, tiles.getTileLocation(9, randint(1, 6)))
+    controller.moveSprite(dishSprite, 0 , 100)
 }
-
+scene.onHitWall(SpriteKind.Dish, function(sprite: Sprite, location: tiles.Location) {
+    if (sprite.isHittingTile(CollisionDirection.Left)){
+        stopDish(sprite)
+    }
+})
+function stopDish (theDish: Sprite) {
+    controller.moveSprite(theDish, 0, 0)
+    theDish.vx = 0
+    if(theDish.right > (5 * 16)){
+        // dont do anything, dude
+        // theDish.setKind(SpriteKind.SettledDish)
+    }
+    else {
+        theDish.setKind(SpriteKind.SettledDish)
+        makeDish()
+    }
+}
+sprites.onOverlap(SpriteKind.Dish, SpriteKind.SettledDish, function(sprite: Sprite, otherSprite: Sprite) {
+    stopDish(sprite)
+})
 scene.setBackgroundImage(img`
     9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
     9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
