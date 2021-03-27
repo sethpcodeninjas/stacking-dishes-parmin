@@ -21,6 +21,23 @@ function unstickDish(theDish: Sprite) {
         theDish.top = topY
     }
 }
+function endingSequence () {
+    pause(1000)
+    // get the dish that did not fit in
+    let dish = sprites.allOfKind(SpriteKind.Dish)[0]
+    // ghost to avoid walls and fly up
+    dish.setFlag(SpriteFlag.Ghost, true)
+    dish.vy = -50
+    //add bubbles
+    effects.bubbles.startScreenEffect()
+    //count da score
+    for (let d of sprites.allOfKind(SpriteKind.SettledDish)){
+        info.changeScoreBy(1)
+        pause(500)
+    }
+    pause(1000)
+    game.over(true)
+}
 function showInstructions(){
     let msg = "These items are fragile so don't stack them:"
     for (let d of dishes){
@@ -31,13 +48,26 @@ function showInstructions(){
     game.showLongText(msg, DialogLayout.Full)
 }
 function makeDish(){
+    let dishesOnScreen = sprites.allOfKind(SpriteKind.Dish)
     let dishIndex = randint(0, dishes.length - 1)
     let dish = dishes[dishIndex]
     let dishSprite = sprites.create(dish.img, SpriteKind.Dish)
+    // store breakable information as data boolean
+    sprites.setDataBoolean(dishSprite, "breakable", dish.breakable)
+
     dishSprite.vx = -50
     tiles.placeOnTile(dishSprite, tiles.getTileLocation(9, randint(1, 6)))
-    controller.moveSprite(dishSprite, 0 , 100)
+    controller.moveSprite(dishSprite, 0 , 100)  
 }
+// get rid of duplicate dishes
+game.onUpdate(function() {
+    let dishes = sprites.allOfKind(SpriteKind.Dish)
+    if (dishes.length > 1){
+        for(let i = 1; i < dishes.length; i++){
+            dishes[i].destroy()
+        }
+    }
+})
 scene.onHitWall(SpriteKind.Dish, function(sprite: Sprite, location: tiles.Location) {
     if (sprite.isHittingTile(CollisionDirection.Left)){
         stopDish(sprite)
@@ -49,14 +79,30 @@ function stopDish (theDish: Sprite) {
     if(theDish.right > (5 * 16)){
         // dont do anything, dude
         // theDish.setKind(SpriteKind.SettledDish)
+        endingSequence()
     }
     else {
         theDish.setKind(SpriteKind.SettledDish)
         makeDish()
     }
 }
+function breakDish(theDish: Sprite){
+    theDish.vx = 0
+    controller.moveSprite(theDish, 0, 0)
+    theDish.destroy(effects.disintegrate)
+}
 sprites.onOverlap(SpriteKind.Dish, SpriteKind.SettledDish, function(sprite: Sprite, otherSprite: Sprite) {
-    stopDish(sprite)
+    let breakable1 = sprites.readDataBoolean(sprite, "breakable")
+    let breakable2 = sprites.readDataBoolean(otherSprite, "breakable")
+    if (breakable1 && breakable2){
+        breakDish(sprite)
+        breakDish(otherSprite)
+        info.changeLifeBy(-1)
+        makeDish()
+    }
+    else{
+        stopDish(sprite)
+    }
 })
 scene.setBackgroundImage(img`
     9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
@@ -188,3 +234,4 @@ tiles.setTilemap(tilemap`level1`)
 */
 // showInstructions()
 makeDish()
+info.setLife(3)
